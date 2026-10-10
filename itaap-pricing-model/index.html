@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ITaaP Pricing Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: control rail of editable assumptions beside a results column; stacks on phones */
+:root{
+  --bg:#f5f7f7; --panel:#ffffff; --ink:#14201f; --muted:#5b6b69; --line:#d8e0df;
+  --accent:#0f766e; --accent-soft:#d6efec; --cost:#b45309; --good:#15803d; --bad:#b91c1c;
+  --font-ui:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-num:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1514; --panel:#172120; --ink:#e4eceb; --muted:#93a5a2; --line:#2a3836;
+  --accent:#2dd4bf; --accent-soft:#133b37; --cost:#f59e0b; --good:#4ade80; --bad:#f87171; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --panel:#172120; --ink:#e4eceb; --muted:#93a5a2; --line:#2a3836;
+  --accent:#2dd4bf; --accent-soft:#133b37; --cost:#f59e0b; --good:#4ade80; --bad:#f87171; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:24px 48px;display:grid;gap:20px}
+header h1{font-size:1.6rem;font-weight:800;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:.25rem 0 0;color:var(--muted);max-width:68ch}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0}
+h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;font-weight:700}
+.col{display:grid;gap:20px;min-width:0}
+label{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,select{font:inherit;font-family:var(--font-num);font-size:.85rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-weight:600;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.82rem}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em}
+td.num,th.num{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+td input,td select{padding:4px 6px}
+td input{width:90px}
+td input.name{width:110px;font-family:var(--font-ui)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
+.kpi b{display:block;font-family:var(--font-num);font-size:1.25rem;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:700;background:var(--accent-soft);color:var(--accent)}
+.pill.bad{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+.note{font-size:.8rem;color:var(--muted);margin:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+svg text{fill:var(--muted);font-family:var(--font-num);font-size:10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.good{color:var(--good)} .bad{color:var(--bad)}
+textarea{width:100%;font-family:var(--font-num);font-size:.75rem;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;min-height:90px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>ITaaP Pricing Model</h1>
+    <p>Model consumption pricing for the ITaaP prompt management service. Edit the price book, the customer scenario and the customer mix, and every bill, margin and projection updates live. The figures loaded at start are example assumptions.</p>
+  </header>
+
+  <section>
+    <div class="row" style="justify-content:space-between"><h2>Price book</h2>
+      <div class="row"><button id="addTier">Add tier</button><button id="reset">Reset to example</button></div></div>
+    <div class="scroll"><table id="tierTable"><thead><tr>
+      <th>Tier</th><th class="num">Platform fee / mo</th><th class="num">Included requests</th><th class="num">Overage / 1k</th>
+      <th class="num">Included editors</th><th class="num">Extra editor / mo</th><th>Over allowance</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p class="note">A request is one managed prompt fetched or logged at runtime. "Hard stop" tiers cannot exceed their allowance, so the model moves the customer up.</p>
+  </section>
+
+  <div class="grid">
+    <div class="col">
+      <section>
+        <h2>Customer scenario</h2>
+        <div class="fields">
+          <label>Requests in month 1<input id="req" type="number" min="0" step="1000"></label>
+          <label>Monthly growth %<input id="growth" type="number" step="0.5"></label>
+          <label>Editors<input id="editors" type="number" min="0"></label>
+          <label>Contracted tier<select id="tierPick"></select></label>
+        </div>
+      </section>
+      <section>
+        <h2>Cost to serve</h2>
+        <div class="fields">
+          <label>Variable cost / 1k requests<input id="unitCost" type="number" min="0" step="0.01"></label>
+          <label>Fixed cost / account / mo<input id="fixedCost" type="number" min="0" step="1"></label>
+          <label>Annual prepay discount %<input id="annualDisc" type="number" min="0" max="100" step="1"></label>
+          <label>Share of customers on annual %<input id="annualShare" type="number" min="0" max="100" step="5"></label>
+        </div>
+        <p class="note">Variable cost covers model gateway, metering, logging and storage. Fixed cost covers support and tenant overhead.</p>
+      </section>
+      <section>
+        <h2>Save and load</h2>
+        <div class="row"><button id="exportBtn">Show model JSON</button><button id="importBtn">Load from JSON</button><button id="copyBtn">Copy</button></div>
+        <textarea id="json" aria-label="Model JSON" placeholder="Paste a saved model here and press Load from JSON"></textarea>
+        <p class="note" id="jsonMsg">Your edits are also kept in this browser.</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <section>
+        <h2>Scenario result, month 1</h2>
+        <div class="kpis">
+          <div class="kpi"><span>Bill on contracted tier</span><b id="kBill">–</b></div>
+          <div class="kpi"><span>Cheapest tier</span><b id="kBest">–</b></div>
+          <div class="kpi"><span>Gross margin</span><b id="kMargin">–</b></div>
+          <div class="kpi"><span>Effective $ / 1k req</span><b id="kEff">–</b></div>
+        </div>
+        <div class="scroll"><table id="compare"><thead><tr><th>Tier</th><th class="num">Platform</th><th class="num">Overage</th><th class="num">Editors</th><th class="num">Total / mo</th><th class="num">Margin</th><th></th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section>
+        <h2>12-month projection</h2>
+        <div class="legend"><span><i class="sw" style="background:var(--accent)"></i>Revenue on contracted tier</span><span><i class="sw" style="background:var(--cost)"></i>Cost to serve</span><span><i class="sw" style="background:var(--muted)"></i>Requests (right axis)</span></div>
+        <div class="scroll"><svg id="chart" viewBox="0 0 720 260" width="100%" style="min-width:520px" role="img" aria-label="Monthly revenue, cost and requests over 12 months"></svg></div>
+        <div class="kpis">
+          <div class="kpi"><span>12-mo revenue</span><b id="pRev">–</b></div>
+          <div class="kpi"><span>12-mo gross profit</span><b id="pGp">–</b></div>
+          <div class="kpi"><span>Usage share of revenue</span><b id="pUse">–</b></div>
+          <div class="kpi"><span>Upgrade month</span><b id="pUp">–</b></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="row" style="justify-content:space-between"><h2>Customer mix</h2><button id="addSeg">Add segment</button></div>
+        <div class="scroll"><table id="segTable"><thead><tr><th>Segment</th><th class="num">Customers</th><th class="num">Avg requests / mo</th><th class="num">Avg editors</th><th>Tier</th><th class="num">MRR</th><th class="num">Margin</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="kpis">
+          <div class="kpi"><span>Total MRR</span><b id="mMrr">–</b></div>
+          <div class="kpi"><span>ARR after discounts</span><b id="mArr">–</b></div>
+          <div class="kpi"><span>Blended margin</span><b id="mMargin">–</b></div>
+          <div class="kpi"><span>Usage share</span><b id="mUse">–</b></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXAMPLE = {
+  tiers:[
+    {name:"Free",base:0,incReq:5000,overage:0,incEd:2,edPrice:0,hard:true},
+    {name:"Team",base:49,incReq:100000,overage:0.60,incEd:3,edPrice:15,hard:false},
+    {name:"Business",base:299,incReq:1000000,overage:0.40,incEd:10,edPrice:25,hard:false},
+    {name:"Enterprise",base:2000,incReq:5000000,overage:0.25,incEd:9999,edPrice:0,hard:false}
+  ],
+  scenario:{req:250000,growth:12,editors:6,tier:"Team"},
+  cost:{unitCost:0.08,fixedCost:12,annualDisc:17,annualShare:40},
+  segments:[
+    {name:"Startups",n:120,req:40000,ed:3,tier:"Team"},
+    {name:"Scale-ups",n:35,req:600000,ed:8,tier:"Business"},
+    {name:"Large enterprise",n:6,req:8000000,ed:40,tier:"Enterprise"}
+  ]
+};
+let M;
+try{M=JSON.parse(localStorage.getItem("itaap-model"))}catch(e){M=null}
+if(!M||!M.tiers)M=structuredClone(EXAMPLE);
+
+const $=id=>document.getElementById(id);
+const money=v=>(v<0?"-":"")+"$"+Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:v!==0&&Math.abs(v)<100?2:0});
+const pct=v=>isFinite(v)?(v*100).toFixed(1)+"%":"–";
+const num=v=>Math.round(v).toLocaleString();
+const save=()=>{try{localStorage.setItem("itaap-model",JSON.stringify(M))}catch(e){}};
+const tierBy=name=>M.tiers.find(t=>t.name===name)||M.tiers[0];
+
+function bill(t,req,ed){
+  if(t.hard&&req>t.incReq)return null;
+  const over=Math.max(0,req-t.incReq)/1000*t.overage;
+  const eds=Math.max(0,ed-t.incEd)*t.edPrice;
+  return {base:t.base,over,eds,total:t.base+over+eds};
+}
+const cost=req=>req/1000*M.cost.unitCost+M.cost.fixedCost;
+function best(req,ed){
+  let b=null;
+  M.tiers.forEach(t=>{const x=bill(t,req,ed);if(x&&(!b||x.total<b.x.total))b={t,x}});
+  return b;
+}
+// contracted tier, auto-moving up when a hard stop is exceeded
+function billContract(name,req,ed){
+  let i=M.tiers.indexOf(tierBy(name));
+  for(;i<M.tiers.length;i++){const x=bill(M.tiers[i],req,ed);if(x)return{t:M.tiers[i],x}}
+  return null;
+}
+
+function renderTiers(){
+  const tb=$("tierTable").tBodies[0];tb.innerHTML="";
+  M.tiers.forEach((t,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><input class="name" id="t${i}name" value="${t.name.replace(/"/g,"&quot;")}"></td>
+      <td class="num"><input id="t${i}base" type="number" min="0" value="${t.base}"></td>
+      <td class="num"><input id="t${i}incReq" type="number" min="0" step="1000" value="${t.incReq}"></td>
+      <td class="num"><input id="t${i}overage" type="number" min="0" step="0.01" value="${t.overage}"></td>
+      <td class="num"><input id="t${i}incEd" type="number" min="0" value="${t.incEd}"></td>
+      <td class="num"><input id="t${i}edPrice" type="number" min="0" value="${t.edPrice}"></td>
+      <td><select id="t${i}hard"><option value="0">Bill overage</option><option value="1"${t.hard?" selected":""}>Hard stop</option></select></td>
+      <td><button data-del="${i}" aria-label="Remove tier">Remove</button></td>`;
+    tb.appendChild(tr);
+    ["name","base","incReq","overage","incEd","edPrice","hard"].forEach(k=>{
+      $("t"+i+k).addEventListener("input",e=>{
+        const old=t.name,v=e.target.value;
+        t[k]=k==="name"?v:k==="hard"?v==="1":(+v||0);
+        if(k==="name"){if(M.scenario.tier===old)M.scenario.tier=v;M.segments.forEach(s=>{if(s.tier===old)s.tier=v});}
+        update(k!=="name");if(k==="name")renderSelects();
+      });
+    });
+  });
+  tb.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(M.tiers.length<2)return;M.tiers.splice(+b.dataset.del,1);renderAll()});
+}
+function tierOptions(sel){return M.tiers.map(t=>`<option${t.name===sel?" selected":""}>${t.name}</option>`).join("")}
+function renderSelects(){
+  $("tierPick").innerHTML=tierOptions(M.scenario.tier);
+  M.segments.forEach((s,i)=>{const el=$("s"+i+"tier");if(el)el.innerHTML=tierOptions(s.tier)});
+}
+function renderSegs(){
+  const tb=$("segTable").tBodies[0];tb.innerHTML="";
+  M.segments.forEach((s,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><input class="name" id="s${i}name" value="${s.name.replace(/"/g,"&quot;")}"></td>
+      <td class="num"><input id="s${i}n" type="number" min="0" value="${s.n}"></td>
+      <td class="num"><input id="s${i}req" type="number" min="0" step="1000" value="${s.req}"></td>
+      <td class="num"><input id="s${i}ed" type="number" min="0" value="${s.ed}"></td>
+      <td><select id="s${i}tier">${tierOptions(s.tier)}</select></td>
+      <td class="num" id="s${i}mrr"></td><td class="num" id="s${i}mg"></td>
+      <td><button data-sdel="${i}" aria-label="Remove segment">Remove</button></td>`;
+    tb.appendChild(tr);
+    ["name","n","req","ed","tier"].forEach(k=>$("s"+i+k).addEventListener("input",e=>{
+      s[k]=(k==="name"||k==="tier")?e.target.value:(+e.target.value||0);update(true)}));
+  });
+  tb.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=()=>{M.segments.splice(+b.dataset.sdel,1);renderAll()});
+}
+
+function update(){
+  save();
+  const S=M.scenario,C=M.cost;
+  // comparison
+  const b=best(S.req,S.editors), con=billContract(S.tier,S.req,S.editors);
+  const tb=$("compare").tBodies[0];tb.innerHTML="";
+  M.tiers.forEach(t=>{
+    const x=bill(t,S.req,S.editors),tr=document.createElement("tr");
+    if(!x){tr.innerHTML=`<td>${t.name}</td><td colspan="5" class="num">Over allowance</td><td><span class="pill bad">Not eligible</span></td>`}
+    else{const mg=(x.total-cost(S.req))/x.total;
+      tr.innerHTML=`<td>${t.name}</td><td class="num">${money(x.base)}</td><td class="num">${money(x.over)}</td><td class="num">${money(x.eds)}</td><td class="num"><b>${money(x.total)}</b></td><td class="num ${mg<0?"bad":""}">${x.total?pct(mg):"–"}</td><td>${b&&b.t===t?'<span class="pill">Cheapest</span>':""}${con&&con.t===t?' <span class="pill">Contracted</span>':""}</td>`}
+    tb.appendChild(tr);
+  });
+  if(con){const c=cost(S.req);$("kBill").textContent=money(con.x.total);
+    $("kMargin").textContent=con.x.total?pct((con.x.total-c)/con.x.total):"–";
+    $("kMargin").className=con.x.total-c<0?"bad":"";
+    $("kEff").textContent=S.req?money(con.x.total/S.req*1000):"–";}
+  $("kBest").textContent=b?b.t.name:"–";
+
+  // projection
+  const months=[];let up=null;
+  for(let m=0;m<12;m++){
+    const req=S.req*Math.pow(1+S.growth/100,m);
+    const k=billContract(S.tier,req,S.editors);
+    const bb=best(req,S.editors);
+    if(up===null&&k&&bb&&bb.t!==k.t&&M.tiers.indexOf(bb.t)>M.tiers.indexOf(k.t))up=m+1;
+    months.push({req,rev:k?k.x.total:0,over:k?k.x.over:0,cost:cost(req)});
+  }
+  const rev=months.reduce((a,m)=>a+m.rev,0),cst=months.reduce((a,m)=>a+m.cost,0),ov=months.reduce((a,m)=>a+m.over,0);
+  $("pRev").textContent=money(rev);$("pGp").textContent=money(rev-cst);$("pGp").className=rev-cst<0?"bad":"";
+  $("pUse").textContent=rev?pct(ov/rev):"–";$("pUp").textContent=up?"Month "+up:"None";
+  drawChart(months);
+
+  // mix
+  let mrr=0,mc=0,mo=0;
+  M.segments.forEach((s,i)=>{
+    const k=billContract(s.tier,s.req,s.ed);const r=k?k.x.total*s.n:0,c=cost(s.req)*s.n;
+    mrr+=r;mc+=c;mo+=k?k.x.over*s.n:0;
+    $("s"+i+"mrr").textContent=money(r);
+    const mg=$("s"+i+"mg");mg.textContent=r?pct((r-c)/r):"–";mg.className="num"+(r-c<0?" bad":"");
+  });
+  const arr=mrr*12*(1-(C.annualShare/100)*(C.annualDisc/100));
+  $("mMrr").textContent=money(mrr);$("mArr").textContent=money(arr);
+  $("mMargin").textContent=mrr?pct((mrr-mc)/mrr):"–";$("mUse").textContent=mrr?pct(mo/mrr):"–";
+}
+
+function drawChart(ms){
+  const W=720,H=260,L=60,R=60,T=14,B=30,w=W-L-R,h=H-T-B;
+  const maxY=Math.max(1,...ms.map(m=>Math.max(m.rev,m.cost)))*1.1;
+  const maxR=Math.max(1,...ms.map(m=>m.req))*1.1;
+  const x=i=>L+w*(i+0.5)/12, y=v=>T+h-h*v/maxY, yr=v=>T+h-h*v/maxR;
+  const bw=w/12*0.32;
+  let s="";
+  for(let k=0;k<=4;k++){const v=maxY*k/4,yy=y(v);
+    s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;
+    s+=`<text x="${L-6}" y="${yy+3}" text-anchor="end">${money(v)}</text>`;
+    s+=`<text x="${W-R+6}" y="${yr(maxR*k/4)+3}">${(maxR*k/4/1e6>=1)?(maxR*k/4/1e6).toFixed(1)+"M":Math.round(maxR*k/4/1e3)+"k"}</text>`;}
+  ms.forEach((m,i)=>{
+    s+=`<rect x="${x(i)-bw-1}" y="${y(m.rev)}" width="${bw}" height="${T+h-y(m.rev)}" fill="var(--accent)" rx="2"><title>Month ${i+1} revenue ${money(m.rev)}</title></rect>`;
+    s+=`<rect x="${x(i)+1}" y="${y(m.cost)}" width="${bw}" height="${T+h-y(m.cost)}" fill="var(--cost)" rx="2"><title>Month ${i+1} cost ${money(m.cost)}</title></rect>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle">M${i+1}</text>`;
+  });
+  s+=`<polyline fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 3" points="${ms.map((m,i)=>x(i)+","+yr(m.req)).join(" ")}"/>`;
+  const last=ms[11];s+=`<circle cx="${x(11)}" cy="${yr(last.req)}" r="3.5" fill="var(--muted)"/>`;
+  $("chart").innerHTML=s;
+}
+
+function bindScenario(){
+  [["req","scenario"],["growth","scenario"],["editors","scenario"],["unitCost","cost"],["fixedCost","cost"],["annualDisc","cost"],["annualShare","cost"]].forEach(([k,g])=>{
+    $(k).value=M[g][k];$(k).oninput=e=>{M[g][k]=+e.target.value||0;update()};
+  });
+  $("tierPick").oninput=e=>{M.scenario.tier=e.target.value;update()};
+}
+function renderAll(){renderTiers();renderSegs();renderSelects();bindScenario();update()}
+
+$("addTier").onclick=()=>{M.tiers.push({name:"New tier "+(M.tiers.length+1),base:999,incReq:2000000,overage:0.35,incEd:20,edPrice:20,hard:false});renderAll()};
+$("addSeg").onclick=()=>{M.segments.push({name:"New segment",n:10,req:100000,ed:4,tier:M.tiers[0].name});renderAll()};
+$("reset").onclick=()=>{M=structuredClone(EXAMPLE);renderAll();$("jsonMsg").textContent="Reset to the example model."};
+$("exportBtn").onclick=()=>{$("json").value=JSON.stringify(M,null,2);$("jsonMsg").textContent="Copy this JSON to keep or share the model."};
+$("copyBtn").onclick=()=>{const t=$("json");if(!t.value)t.value=JSON.stringify(M,null,2);
+  navigator.clipboard.writeText(t.value).then(()=>$("jsonMsg").textContent="Copied.").catch(()=>{t.select();$("jsonMsg").textContent="Text selected. Press Ctrl+C or Cmd+C to copy."})};
+$("importBtn").onclick=()=>{try{const d=JSON.parse($("json").value);if(!Array.isArray(d.tiers)||!d.scenario||!d.cost||!Array.isArray(d.segments))throw 0;M=d;renderAll();$("jsonMsg").textContent="Model loaded."}
+  catch(e){$("jsonMsg").textContent="That JSON is not a saved model. Use Show model JSON to see the expected shape."}};
+renderAll();
+</script>
+</body>
+</html>
